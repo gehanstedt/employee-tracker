@@ -1,0 +1,36 @@
+{
+  "name": "employee-tracker",
+  "version": "1.0.0",
+  "description": "Node.js / mysql/ inquirer application to keep track of employees, managers, departments.",
+  "main": "employee-tracker.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node employee-tracker.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gehanstedt/employee-tracker.git"
+  },
+  "keywords": [
+    "Employee",
+    "Tracker",
+    "Node.js",
+    "Inquirer",
+    "MySQL",
+    "Georgia",
+    "Tech",
+    "Coding",
+    "Bootcamp"
+  ],
+  "author": "Greg Hanstedt",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/gehanstedt/employee-tracker/issues"
+  },
+  "homepage": "https://github.com/gehanstedt/employee-tracker#readme",
+  "dependencies": {
+    "console.table": "^0.10.0",
+    "inquirer": "^7.3.3",
+    "mysql": "^2.18.1"
+  }
+}

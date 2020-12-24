@@ -18,6 +18,10 @@ const mainChoices = [
         value: "viewallbymanager"
     },
     {
+        name: "View Departments",
+        value: "viewdepartments"
+    },
+    {
         name: "Add an Employee",
         value: "addemployee"
     },
@@ -26,20 +30,20 @@ const mainChoices = [
         value: "removeemployee"
     },
     {
-        name: "Update Employee Role",
-        value: "removeemployee"
-    },
-    {
-        name: "Update Employee Manager",
-        value: "removeemployee"
+        name: "Update an Employee's Manager",
+        value: "updatemanager"
     },
     {
         name: "View All Roles",
-        value: "removeemployee"
+        value: "viewroles"
     },
     {
         name: "Add Role",
-        value: "removeemployee"
+        value: "addrole"
+    },
+    {
+        name: "Add Department",
+        value: "adddepartment"
     },
     {
         name: "Remove Role",
@@ -50,8 +54,6 @@ const mainChoices = [
         value: "None"
     }
 ];
-
-
 
 // create the connection information for the sql database
 var connection = mysql.createConnection({
@@ -105,18 +107,44 @@ function start() {
                 doViewAllByManager ();
                 break;
 
+            case "viewdepartments":
+                console.log (`All departments`);
+                doViewDepartments ();
+                break;
+    
+            case "viewroles":
+                console.log (`All roles`);
+                doViewRoles ();
+                break;
+        
             case "addemployee":
                 console.log (`Add an employee`);
                 doAddEmployee ();
                 break;
             
-            default:
-                console.log (`Case ${answer.choise} not handled.`);
-                start ();
+            case "addrole":
+                console.log (`Add a role`);
+                doAddRole ();
+                break;
+    
+            case "adddepartment":
+                console.log (`Add aa department`);
+                doAddDepartment ();
+                break;
 
+            case "updatemanager":
+                console.log (`Update an employee's manager`);
+                doUpdateManager ();
+                break;
+            
             case "None":
                 connection.end ();
                 break;
+
+            default:
+                console.log (`Case ${answer.choice} not handled.`);
+                start ();
+
         }
     });
 }
@@ -144,51 +172,165 @@ function doAddEmployee () {
             })
 
             inquirer .prompt([
-                {
-                    name: "firstName",
-                    type: "input",
-                    message: "Employee's first name: ",
-                },
-                {
-                    name: "lastName",
-                    type: "input",
-                    message: "Employee's last name: ",
-                },
-                {
-                    name: "roleID",
-                    type: "list",
-                    message: "Select Role",
-                    choices: roleResults
-                },
-                {
-                    name: "managerID",
-                    type: "list",
-                    message: "Select Manager",
-                    choices: managerResults
-                },
-                ])
-                .then(function(answer) {
-                    managerID = answer.managerID;
-                    if (managerID === -1) {
-                        managerID = null;
-                    }
-                    const insertStatement = `
-                        INSERT INTO employee (first_name, last_name, role_id, manager_id)
-                        VALUES ("${answer.firstName}", "${answer.lastName}", ${answer.roleID}, ${managerID})`;
+            {
+                name: "firstName",
+                type: "input",
+                message: "Employee's first name: ",
+            },
+            {
+                name: "lastName",
+                type: "input",
+                message: "Employee's last name: ",
+            },
+            {
+                name: "roleID",
+                type: "list",
+                message: "Select Role",
+                choices: roleResults
+            },
+            {
+                name: "managerID",
+                type: "list",
+                message: "Select Manager",
+                choices: managerResults
+            },
+            ])
+            .then(function(answer) {
+                managerID = answer.managerID;
+                if (managerID === -1) {
+                    managerID = null;
+                }
+                const insertStatement = `
+                    INSERT INTO employee (first_name, last_name, role_id, manager_id)
+                    VALUES ("${answer.firstName}", "${answer.lastName}", ${answer.roleID}, ${managerID})`;
 
-                    connection.query(insertStatement, function(err, insertResult) {
-                        if (err) throw err;
-                        console.log (`Employee ${answer.firstName} ${answer.lastName} added.`);
-                        start ();
-                    });
+                connection.query(insertStatement, function(err, insertResult) {
+                    if (err) throw err;
+                    console.log (`Employee ${answer.firstName} ${answer.lastName} added.`);
+                    start ();
                 });
+            });
         });
     });
-
-
-
-
 }
+
+function doUpdateManager () {
+    const employeeQuery = `
+        SELECT CONCAT (E.first_name, " ", E.last_name) AS name, E.id AS value, E.manager_id as manager_id, CONCAT (M.first_name, " ", M.last_name) AS manager_name
+        FROM employee e LEFT JOIN employee m on m.id = e.manager_id
+        ORDER BY E.last_name ASC;`;
+
+    connection.query(employeeQuery, function(err, employeeResults) {
+        if (err) throw err;
+
+        inquirer .prompt([
+        {
+            name: "employeeID",
+            type: "list",
+            message: "Select Employee",
+            choices: employeeResults
+        },
+        ])
+        .then(function(answer) {
+            employeeResults.unshift ({
+                name: `(None)`,
+                value: null
+            })
+
+            const employeeID = answer.employeeID;
+            const employeeIndex = employeeResults.findIndex(obj => obj.value == employeeID);
+            const managerIndex = employeeResults.findIndex(obj => obj.value == employeeResults[employeeIndex].manager_id)
+
+            console.log (`Previous manager was ${employeeResults [managerIndex].name}`);
+
+            inquirer .prompt([
+            {
+                name: "managerID",
+                type: "list",
+                message: "Select New Manager",
+                default: managerIndex,
+                choices: employeeResults
+            },
+            ])
+            .then(function(managerAnswer) {
+                const updateStatement = `
+                UPDATE employee SET manager_id = ${managerAnswer.managerID} 
+                WHERE id = ${employeeID};`;
+
+                connection.query(updateStatement, function(err, updateResult) {
+                    if (err) throw err;
+                    console.log (`Employee updated.`);
+                    start ();
+                });
+            });
+        });
+    });
+}
+
+
+function doAddRole () {
+    const departmentQuery = `
+        SELECT name AS name, id AS value 
+        FROM department 
+        ORDER BY name ASC;`;
+
+    connection.query(departmentQuery, function(err, departmentResults) {
+        if (err) throw err;
+
+        inquirer .prompt([
+        {
+            name: "title",
+            type: "input",
+            message: "Role's title: ",
+        },
+        {
+            name: "salary",
+            type: "input",
+            message: "Role's salary: ",
+        },
+        {
+            name: "departmentID",
+            type: "list",
+            message: "Select Department",
+            choices: departmentResults
+        },
+
+        ])
+        .then(function(answer) {
+            const insertStatement = `
+                INSERT INTO role (title, salary, department_id)
+                VALUES ("${answer.title}", ${answer.salary}, ${answer.departmentID});`;
+
+            connection.query(insertStatement, function(err, insertResult) {
+                if (err) throw err;
+                console.log (`Role ${answer.title} - Salary ${answer.salary} added.`);
+                start ();
+            });
+        });
+    });
+}
+
+function doAddDepartment () {
+    inquirer .prompt([
+    {
+        name: "departmentName",
+        type: "input",
+        message: "Department name: ",
+    },
+    ])
+    .then(function(answer) {
+        const insertStatement = `
+            INSERT INTO department (name)
+            VALUES ("${answer.departmentName}");`;
+
+        connection.query(insertStatement, function(err, insertResult) {
+            if (err) throw err;
+            console.log (`Department ${answer.departmentName} added.`);
+            start ();
+        });
+    });
+}
+
 
 function doViewAll () {
     const query = `
@@ -226,6 +368,21 @@ function doViewAllByManager () {
     finishSelect (query);
 }
 
+function doViewDepartments () {
+    const query = `SELECT id as ID, name as Name FROM department;`;
+
+    finishSelect (query);
+}
+
+function doViewRoles () {
+    const query = `
+    SELECT role.id AS ID, role.title AS Title, role.salary AS Salary, department.name AS "Department Name" 
+    FROM role
+    LEFT JOIN department ON role.department_id=department.id
+    ORDER BY role.id ASC;`;
+
+    finishSelect (query);
+}
 
 function finishSelect (query) {
     connection.query(query, function(err, results) {

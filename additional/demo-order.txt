@@ -1,0 +1,15 @@
+1	View Departments
+2	Add Department
+3	View Roles
+4	Add Role
+5	View all employees - by ID
+6	Add employee
+7	View all employees - by Department
+8	Update an Employee's Manager
+9	View all employees - by Manager
+10	Remove an Employee
+11	View all employees
+12	Remove Role
+13	View Roles
+14	Remove Department
+15	View Departments

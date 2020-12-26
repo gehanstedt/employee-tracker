@@ -21,10 +21,22 @@ https://github.com/gehanstedt/employee-tracker
 (None)
 
 ## Installation
-Install Node.js, Install NPM, Install Inquirer, Install MySQL, Install console.table 
+Install Node.js
+
+Install NPM (Node Packege Manager)
+
+Install Inquirer
+
+Install MySQL
+
+Install console.table 
 
 ## Usage
-npm start    --or-- node employee-tracker.js
+npm start    
+
+--or-- 
+
+node employee-tracker.js
 
 ## License
 <img src="https://img.shields.io/badge/License-MIT-yellow.svg"> MIT License

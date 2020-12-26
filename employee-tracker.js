@@ -46,8 +46,12 @@ const mainChoices = [
         value: "adddepartment"
     },
     {
+        name: "Remove Department",
+        value: "removedepartment"
+    },
+    {
         name: "Remove Role",
-        value: "removeemployee"
+        value: "removerole"
     },
     {
         name: `I am finshed`,
@@ -122,14 +126,29 @@ function start() {
                 doAddEmployee ();
                 break;
             
+            case "removeemployee":
+                console.log (`Remove an employee`);
+                doRemoveEmployee ();
+                break;
+
             case "addrole":
                 console.log (`Add a role`);
                 doAddRole ();
                 break;
     
+            case "removerole":
+                console.log (`Remove a role`);
+                doRemoveRole ();
+                break;
+
             case "adddepartment":
-                console.log (`Add aa department`);
+                console.log (`Add a department`);
                 doAddDepartment ();
+                break;
+
+            case "removedepartment":
+                console.log (`Remove a department`);
+                doRemoveDepartment ();
                 break;
 
             case "updatemanager":
@@ -331,6 +350,38 @@ function doAddDepartment () {
     });
 }
 
+function doRemoveEmployee () {
+    const query = `
+        SELECT CONCAT (first_name, " ", last_name) as name, id as value
+        FROM employee
+        ORDER BY last_name ASC;`;
+
+    finishRemove (query,
+                 "employee",
+                 "Select employee to remove");
+}
+
+function doRemoveDepartment () {
+    const query = `
+        SELECT name as name, id as value
+        FROM department
+        ORDER BY name ASC;`;
+
+    finishRemove (query,
+                 "department",
+                 "Select department to remove");
+}
+
+function doRemoveRole () {
+    const query = `
+        SELECT title as name, id as value
+        FROM role
+        ORDER BY name ASC;`;
+
+    finishRemove (query,
+                 "role",
+                 "Select role to remove");
+}
 
 function doViewAll () {
     const query = `
@@ -389,6 +440,33 @@ function finishSelect (query) {
         if (err) throw err;
         console.table (results);
         start ();
+    });
+}
+
+function finishRemove (query, table, question) {
+    connection.query(query, function(err, results) {
+        if (err) throw err;
+        console.table (results);
+
+        inquirer .prompt([
+        {
+            name: "id",
+            type: "list",
+            message: question,
+            choices: results
+        },
+        ])
+        .then(function(answer) {
+            const deleteStatement = `
+            DELETE FROM ${table}
+            WHERE id = ${answer.id};`;
+    
+            connection.query(deleteStatement, function(err, updateResult) {
+                if (err) throw err;
+                console.log (`Deleted.`);
+                start ();
+            });
+        });
     });
 }
 

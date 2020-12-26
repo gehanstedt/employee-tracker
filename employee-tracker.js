@@ -1,3 +1,4 @@
+// Requirements
 var mysql = require("mysql");
 var inquirer = require("inquirer");
 var cTable = require('console.table');
@@ -5,6 +6,10 @@ var cTable = require('console.table');
 
 // Constant definitions
 const mainChoices = [
+    {
+        name: "Add an Employee",
+        value: "addemployee"
+    },
     {
         name: "View All Employees",
         value: "viewall"
@@ -18,40 +23,36 @@ const mainChoices = [
         value: "viewallbymanager"
     },
     {
-        name: "View Departments",
-        value: "viewdepartments"
-    },
-    {
-        name: "Add an Employee",
-        value: "addemployee"
+        name: "Update an Employee's Manager",
+        value: "updatemanager"
     },
     {
         name: "Remove an Employee",
         value: "removeemployee"
     },
     {
-        name: "Update an Employee's Manager",
-        value: "updatemanager"
+        name: "Add Role",
+        value: "addrole"
     },
     {
         name: "View All Roles",
         value: "viewroles"
     },
     {
-        name: "Add Role",
-        value: "addrole"
+        name: "Remove Role",
+        value: "removerole"
     },
     {
         name: "Add Department",
         value: "adddepartment"
     },
     {
-        name: "Remove Department",
-        value: "removedepartment"
+        name: "View Departments",
+        value: "viewdepartments"
     },
     {
-        name: "Remove Role",
-        value: "removerole"
+        name: "Remove Department",
+        value: "removedepartment"
     },
     {
         name: `I am finshed`,
@@ -82,10 +83,11 @@ connection.connect(function(err) {
   start();
 });
 
-// function which prompts the user for what action they should take
+// Main function that controls all input - tihs will be called multiple times to restart process
 function start() {
     console.log ("");
 
+    // Use inquirer to prompt user for their choice of action.  Choices are defined above by const mainChoices.
     inquirer
         .prompt({
         name: "choice",
@@ -94,7 +96,7 @@ function start() {
         choices: mainChoices
         })
         .then(function(answer) {
-        // based on their answer, either call the bid or the post functions
+        // Call appropriate child function based on what user selected
         switch (answer.choice) {
             case "viewall":
                 doViewAll ();
@@ -168,7 +170,10 @@ function start() {
     });
 }
 
+// Function to add an employee - this is the most complex add function since it first has to retrieve all
+// roles and departments
 function doAddEmployee () {
+    // Build queries to select all roles and managers
     const roleQuery = `
         SELECT title AS name, id AS value 
         FROM role 
@@ -179,17 +184,24 @@ function doAddEmployee () {
         ORDER BY last_name ASC;
     `;
 
+    // Connect to database and execute manager query
     connection.query(roleQuery, function(err, roleResults) {
         if (err) throw err;
 
+
+        // Connect to database and execute 
         connection.query(managerQuery, function(err, managerResults) {
             if (err) throw err;
 
+            // Inject a manager "(None)" into the manager list to allow user to select
+            // No manager for the user.
             managerResults.unshift ({
                 name: `(None)`,
-                value: -1
+                value: null
             })
 
+            // Using Inquirer, prompt user for new employee's values - first name, last name,
+            // role and manager
             inquirer .prompt([
             {
                 name: "firstName",
@@ -215,14 +227,12 @@ function doAddEmployee () {
             },
             ])
             .then(function(answer) {
-                managerID = answer.managerID;
-                if (managerID === -1) {
-                    managerID = null;
-                }
+                // Build query to insert to employee into employee table
                 const insertStatement = `
                     INSERT INTO employee (first_name, last_name, role_id, manager_id)
-                    VALUES ("${answer.firstName}", "${answer.lastName}", ${answer.roleID}, ${managerID})`;
+                    VALUES ("${answer.firstName}", "${answer.lastName}", ${answer.roleID}, ${answer.managerID})`;
 
+                // Execute the insert statement.  If successful, call start () to start over.
                 connection.query(insertStatement, function(err, insertResult) {
                     if (err) throw err;
                     console.log (`Employee ${answer.firstName} ${answer.lastName} added.`);
@@ -233,15 +243,19 @@ function doAddEmployee () {
     });
 }
 
+// Function to update an employee's manager
 function doUpdateManager () {
+    // Build all employee query
     const employeeQuery = `
         SELECT CONCAT (E.first_name, " ", E.last_name) AS name, E.id AS value, E.manager_id as manager_id, CONCAT (M.first_name, " ", M.last_name) AS manager_name
         FROM employee e LEFT JOIN employee m on m.id = e.manager_id
         ORDER BY E.last_name ASC;`;
 
+    // Run employee query
     connection.query(employeeQuery, function(err, employeeResults) {
         if (err) throw err;
 
+        // Prompt user to select the employee to be updated
         inquirer .prompt([
         {
             name: "employeeID",
@@ -251,17 +265,21 @@ function doUpdateManager () {
         },
         ])
         .then(function(answer) {
+            // Now we use employeeResults query as a list of managers, but first Inject a null manager into this list
             employeeResults.unshift ({
                 name: `(None)`,
                 value: null
-            })
+            });
 
+            // Set some constants to make things easier
             const employeeID = answer.employeeID;
             const employeeIndex = employeeResults.findIndex(obj => obj.value == employeeID);
             const managerIndex = employeeResults.findIndex(obj => obj.value == employeeResults[employeeIndex].manager_id)
 
+            // Display previous manager
             console.log (`Previous manager was ${employeeResults [managerIndex].name}`);
 
+            // Use inquirer to prompt user to select a new manager for the selected employee
             inquirer .prompt([
             {
                 name: "managerID",
@@ -272,10 +290,12 @@ function doUpdateManager () {
             },
             ])
             .then(function(managerAnswer) {
+                // Build update statement to set the employee's new manager
                 const updateStatement = `
                 UPDATE employee SET manager_id = ${managerAnswer.managerID} 
                 WHERE id = ${employeeID};`;
 
+                // Execute update
                 connection.query(updateStatement, function(err, updateResult) {
                     if (err) throw err;
                     console.log (`Employee updated.`);
@@ -286,16 +306,19 @@ function doUpdateManager () {
     });
 }
 
-
+// Function add role
 function doAddRole () {
+    // Build query to select all departments
     const departmentQuery = `
         SELECT name AS name, id AS value 
         FROM department 
         ORDER BY name ASC;`;
 
+    // Execute database query to select all departments
     connection.query(departmentQuery, function(err, departmentResults) {
         if (err) throw err;
 
+        // Use inquirer to prompt user for role title, salary and department
         inquirer .prompt([
         {
             name: "title",
@@ -316,10 +339,12 @@ function doAddRole () {
 
         ])
         .then(function(answer) {
+            // Build insert statement to add new role
             const insertStatement = `
                 INSERT INTO role (title, salary, department_id)
                 VALUES ("${answer.title}", ${answer.salary}, ${answer.departmentID});`;
 
+            // Execute insert statement and then restart with start ()
             connection.query(insertStatement, function(err, insertResult) {
                 if (err) throw err;
                 console.log (`Role ${answer.title} - Salary ${answer.salary} added.`);
@@ -329,7 +354,9 @@ function doAddRole () {
     });
 }
 
+// Function add department
 function doAddDepartment () {
+    // Get new department name from user via inquirer
     inquirer .prompt([
     {
         name: "departmentName",
@@ -338,10 +365,12 @@ function doAddDepartment () {
     },
     ])
     .then(function(answer) {
+        // Build insert statement to add new department
         const insertStatement = `
             INSERT INTO department (name)
             VALUES ("${answer.departmentName}");`;
 
+        // Execute insert statement and then restart with start ()
         connection.query(insertStatement, function(err, insertResult) {
             if (err) throw err;
             console.log (`Department ${answer.departmentName} added.`);
@@ -350,40 +379,51 @@ function doAddDepartment () {
     });
 }
 
+// Function remove employee
 function doRemoveEmployee () {
+    // Build query to select all employee's first and last names
     const query = `
         SELECT CONCAT (first_name, " ", last_name) as name, id as value
         FROM employee
         ORDER BY last_name ASC;`;
 
+    // Call generic remove function to complete removal from database
     finishRemove (query,
                  "employee",
                  "Select employee to remove");
 }
 
+// Function remove department
 function doRemoveDepartment () {
+    // Build query to select all departments
     const query = `
         SELECT name as name, id as value
         FROM department
         ORDER BY name ASC;`;
 
+    // Call generic remove function to complete removal from database
     finishRemove (query,
                  "department",
                  "Select department to remove");
 }
 
+// Function remove all
 function doRemoveRole () {
+    // Build query to select all roles
     const query = `
         SELECT title as name, id as value
         FROM role
         ORDER BY name ASC;`;
 
+    // Call generic remove function to complete removal from database
     finishRemove (query,
                  "role",
                  "Select role to remove");
 }
 
+// Function to view all employees - just ordered by employee ID
 function doViewAll () {
+    // Build query to select all employees, their managers, roles, departments - order by employee ID
     const query = `
         SELECT e.id as ID, e.first_name AS "First Name", e.last_name AS "Last Name", role.title as Title, CONCAT ("$", FORMAT (role.salary, 2)) as Salary, 
         department.name as Department, CONCAT (m.first_name," ", m.last_name) as Manager
@@ -392,10 +432,13 @@ function doViewAll () {
         LEFT JOIN department ON role.department_id=department.id
         ORDER BY e.id ASC;`;
 
+    // Call generic select finish function to retrieve and then display information
     finishSelect (query);
 }
 
+// Function to view all employees - just ordered by department
 function doViewAllByDepartment () {
+    // Build query to select all employees, their managers, roles, departments - order by department name
     const query = `
         SELECT e.id as ID, e.first_name AS "First Name", e.last_name AS "Last Name", role.title as Title, CONCAT ("$", FORMAT (role.salary, 2)) as Salary, 
         department.name as Department, CONCAT (m.first_name," ", m.last_name) as Manager
@@ -404,10 +447,13 @@ function doViewAllByDepartment () {
         LEFT JOIN department ON role.department_id=department.id
         ORDER BY department.name ASC;`;
 
+    // Call generic select finish function to retrieve and then display information
     finishSelect (query);
 }
 
+// Function to view all employees - just ordered by manager
 function doViewAllByManager () {
+    // Build query to select all employees, their managers, roles, departments - order by manager last name, then first name
     const query = `
         SELECT e.id as ID, e.first_name AS "First Name", e.last_name AS "Last Name", role.title as Title, CONCAT ("$", FORMAT (role.salary, 2)) as Salary, 
         department.name as Department, CONCAT (m.first_name," ", m.last_name) as Manager
@@ -416,38 +462,51 @@ function doViewAllByManager () {
         LEFT JOIN department ON role.department_id=department.id
         ORDER BY m.last_name ASC, m.first_name ASC;`;
 
+    // Call generic select finish function to retrieve and then display information
     finishSelect (query);
 }
 
+// Function to view all departments
 function doViewDepartments () {
-    const query = `SELECT id as ID, name as Name FROM department;`;
+    // Build query to view all departments
+    const query = `SELECT id as ID, name as Name FROM department ORDER BY ID ASC;`;
 
+    // Call generic select finish function to retrieve and then display information
     finishSelect (query);
 }
 
+// Function to veiw all roles
 function doViewRoles () {
+    // Build query to view all roles
     const query = `
     SELECT role.id AS ID, role.title AS Title, role.salary AS Salary, department.name AS "Department Name" 
     FROM role
     LEFT JOIN department ON role.department_id=department.id
     ORDER BY role.id ASC;`;
 
+    // Call generic select finish function to retrieve and then display information
     finishSelect (query);
 }
 
+// Function to generically finish view queries and display via console.table
 function finishSelect (query) {
+    // Execute database query passed in from calling function
     connection.query(query, function(err, results) {
         if (err) throw err;
+        // Display results using console.table
         console.table (results);
+        // Restart prompting using start ()
         start ();
     });
 }
 
+// Function to complete removal of employee, role or department
 function finishRemove (query, table, question) {
+    // Execute query build by calling function to select employees, roles or departments (referred to as object going forward)
     connection.query(query, function(err, results) {
         if (err) throw err;
-        console.table (results);
 
+        // Use inquirer to have user select object to be deleted
         inquirer .prompt([
         {
             name: "id",
@@ -457,18 +516,18 @@ function finishRemove (query, table, question) {
         },
         ])
         .then(function(answer) {
+            // Build delete statemetn to remove the object user selected
             const deleteStatement = `
             DELETE FROM ${table}
             WHERE id = ${answer.id};`;
-    
+
+            // Call database to execute delete statement
             connection.query(deleteStatement, function(err, updateResult) {
                 if (err) throw err;
                 console.log (`Deleted.`);
+                // Restart user prompting by calling the start () function
                 start ();
             });
         });
     });
 }
-
-
-  

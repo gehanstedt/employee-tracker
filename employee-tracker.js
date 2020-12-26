@@ -11,7 +11,7 @@ const mainChoices = [
         value: "addemployee"
     },
     {
-        name: "View All Employees",
+        name: "View All Employees by ID",
         value: "viewall"
     },
     {

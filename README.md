@@ -27,9 +27,14 @@ Install NPM (Node Packege Manager)
 
 Install Inquirer
 
-Install MySQL
+Install mysql NPM package
 
 Install console.table 
+
+Install / Have access to MySQL database
+
+Install database schema and seed data - schema-employeeTracker.sql, seed-employeeTracker.sql
+
 
 ## Usage
 npm start    

@@ -26,41 +26,6 @@ VALUES ("Manager", "Guy", 1, NULL),
        ("Anna", "Marketing", 5, 6),
        ("Lisa", "Marketing", 6, 6);
 
-
-CREATE TABLE employee(
-  id INT NOT NULL AUTO_INCREMENT,
-  first_name VARCHAR(30),
-  last_name VARCHAR(30),
-  role_id INT,
-  manager_id INT,
-  PRIMARY KEY (id)
-);
-
-CREATE TABLE role(
-  id INT NOT NULL AUTO_INCREMENT,
-  title VARCHAR(30),
-  salary DECIMAL,
-  department_id INT,
-  PRIMARY KEY (id)
-);
-
-CREATE TABLE department(
-  id INT NOT NULL AUTO_INCREMENT,
-  name VARCHAR(30),
-  PRIMARY KEY (id)
-);
-
-
-SELECT employee.first_name, employee.last_name, role.title, role.salary, department.name
-FROM employee
-INNER JOIN role ON employee.role_id = role.id
-INNER JOIN department ON role.department_id = department.id
-
-
-SELECT
-m.employee.first_name, m.employee.last_name, m.role.title, m.role.salary, m.department.name AS Manager,
-e.employee.first_name, e.employee.last_name, e.role.title, e.role.salary, e.department.name AS Direct
-FROM employee e
-INNER JOIN employee m ON m.id = e.manager_id
-INNER JOIN employee ON employee.role_id = role.id
-INNER JOIN department ON role.department_id = department.id;
+SELECT * FROM department;
+SELECT * FROM role;
+SELECT * FROM employee;
